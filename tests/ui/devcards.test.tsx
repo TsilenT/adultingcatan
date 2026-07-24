@@ -170,6 +170,34 @@ test("road building shows pending roads, supports tap-to-remove, and confirms", 
   expect(screen.queryByRole("dialog", { name: /road building/i })).toBeNull();
 });
 
+test("road building asks for a second confirmation before spending the card on one road", async () => {
+  const g = roadBuildingGame();
+  const s = new GameStore(g, new LocalStoragePersistence(), mulberry32(0));
+  const { container } = render(<GameProvider store={s}><GameView /></GameProvider>);
+
+  await userEvent.click(screen.getByRole("button", { name: "Road Building" }));
+  await userEvent.click(container.querySelector("[data-edge-slot]")!);
+  const placement = screen.getByRole("dialog", { name: /road building/i });
+  await userEvent.click(within(placement).getByRole("button", { name: /confirm/i }));
+
+  const warning = screen.getByRole("dialog", { name: /use only one road/i });
+  expect(warning).toHaveTextContent(/one free road unbuilt/i);
+  expect(Object.keys(s.getState().board.roads)).toHaveLength(0);
+  expect(s.getState().players[0]!.devCards[0]!.played).toBe(false);
+
+  await userEvent.click(within(warning).getByRole("button", { name: /keep building/i }));
+  expect(screen.queryByRole("dialog", { name: /use only one road/i })).toBeNull();
+  expect(screen.getByRole("dialog", { name: /road building/i })).toHaveTextContent("Roads placed: 1/2");
+
+  await userEvent.click(within(screen.getByRole("dialog", { name: /road building/i })).getByRole("button", { name: /confirm/i }));
+  await userEvent.click(within(screen.getByRole("dialog", { name: /use only one road/i }))
+    .getByRole("button", { name: /use only one road/i }));
+
+  expect(Object.keys(s.getState().board.roads)).toHaveLength(1);
+  expect(s.getState().players[0]!.devCards[0]!.played).toBe(true);
+  expect(screen.queryByRole("dialog", { name: /road building/i })).toBeNull();
+});
+
 test("road building is cancelable without consuming the card", async () => {
   const g = roadBuildingGame();
   const s = new GameStore(g, new LocalStoragePersistence(), mulberry32(0));

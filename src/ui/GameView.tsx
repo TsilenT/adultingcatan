@@ -47,6 +47,7 @@ export function GameView() {
   const [pendingKnight, setPendingKnight] = useState(false);
   const [devModal, setDevModal] = useState<"monopoly" | "yearOfPlenty" | null>(null);
   const [roadEdges, setRoadEdges] = useState<string[] | null>(null);
+  const [confirmSingleRoad, setConfirmSingleRoad] = useState(false);
   const [buildMode, setBuildMode] = useState<BuildMode>(null);
   const [confirmPurchases, setConfirmPurchases] = useState(() => localStorage.getItem(CONFIRM_PURCHASES_KEY) === "true");
   const [pendingBuild, setPendingBuild] = useState<
@@ -173,6 +174,7 @@ export function GameView() {
     if (!interactive) return;
     if (roadEdges !== null) {
       // Tap a highlighted edge to place; tap a pending road again to remove it.
+      setConfirmSingleRoad(false);
       if (roadEdges.includes(e)) setRoadEdges(roadEdges.filter((x) => x !== e));
       else if (roadEdges.length < 2) setRoadEdges([...roadEdges, e]);
       return;
@@ -219,13 +221,20 @@ export function GameView() {
     if (type === "knight") { setPendingKnight(true); setPendingRobberHex(null); setRobberPick(null); collapseSheetForBoard(); return; }
     if (type === "monopoly") return setDevModal("monopoly");
     if (type === "yearOfPlenty") return setDevModal("yearOfPlenty");
-    if (type === "roadBuilding") { setRoadEdges([]); collapseSheetForBoard(); }
+    if (type === "roadBuilding") { setRoadEdges([]); setConfirmSingleRoad(false); collapseSheetForBoard(); }
   };
 
-  const confirmRoadBuilding = async () => {
+  const confirmRoadBuilding = async (singleRoadConfirmed = false) => {
     if (roadEdges === null || roadEdges.length < 1) return;
+    if (roadEdges.length === 1 && !singleRoadConfirmed) {
+      setConfirmSingleRoad(true);
+      return;
+    }
     const result = await run({ type: "playRoadBuilding", edges: roadEdges });
-    if (result.ok) setRoadEdges(null);
+    if (result.ok) {
+      setRoadEdges(null);
+      setConfirmSingleRoad(false);
+    }
   };
 
   const confirmSetupPlacement = async () => {
@@ -301,12 +310,18 @@ export function GameView() {
                 <p>Choose a hex for the knight, or cancel to keep the card.</p>
                 <button onClick={() => { setPendingKnight(false); setPendingRobberHex(null); }}>Cancel</button>
               </div>
+            ) : roadEdges !== null && confirmSingleRoad ? (
+              <div className="action-bar action-confirm" role="dialog" aria-modal="true" aria-label="Use only one road">
+                <p><strong>Leave a road untraveled?</strong> Ending now leaves one free road unbuilt.</p>
+                <button className="btn-primary" onClick={() => setConfirmSingleRoad(false)}>Keep building</button>
+                <button onClick={() => { void confirmRoadBuilding(true); }}>Use only one road</button>
+              </div>
             ) : roadEdges !== null ? (
               <div className="action-bar action-confirm" role="dialog" aria-modal="true" aria-label="Road building">
                 <p>Roads placed: {roadEdges.length}/2</p>
                 <button className="btn-primary" disabled={roadEdges.length < 1}
                   onClick={() => { void confirmRoadBuilding(); }}>Confirm</button>
-                <button onClick={() => setRoadEdges(null)}>Cancel</button>
+                <button onClick={() => { setRoadEdges(null); setConfirmSingleRoad(false); }}>Cancel</button>
               </div>
             ) : pendingSetup !== null ? (
               <div className="action-bar action-confirm placement-confirm" role="dialog" aria-label="Confirm placement">

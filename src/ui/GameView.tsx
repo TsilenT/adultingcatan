@@ -311,9 +311,9 @@ export function GameView() {
                 <button onClick={() => { setPendingKnight(false); setPendingRobberHex(null); }}>Cancel</button>
               </div>
             ) : roadEdges !== null && confirmSingleRoad ? (
-              <div className="action-bar action-confirm" role="dialog" aria-modal="true" aria-label="Use only one road">
+              <div className="action-bar action-confirm" role="dialog" aria-label="Use only one road">
                 <p><strong>Leave a road untraveled?</strong> Ending now leaves one free road unbuilt.</p>
-                <button className="btn-primary" onClick={() => setConfirmSingleRoad(false)}>Keep building</button>
+                <button autoFocus className="btn-primary" onClick={() => setConfirmSingleRoad(false)}>Keep building</button>
                 <button onClick={() => { void confirmRoadBuilding(true); }}>Use only one road</button>
               </div>
             ) : roadEdges !== null ? (
